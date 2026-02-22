@@ -20,9 +20,12 @@ const FRAGMENT_TYPES: ReadonlySet<SlideType> = new Set([
 /**
  * Extract the slide_type from a notebook cell's metadata.
  *
- * Jupyter stores this in `cell.metadata.slideshow.slide_type`, but different
- * notebook formats / extensions sometimes place it elsewhere, so we check a
- * few locations.
+ * VS Code's built-in `vscode.ipynb` deserializer wraps Jupyter cell metadata
+ * under an extra `metadata` key, so the actual path is:
+ *   cell.metadata.metadata.slideshow.slide_type
+ *
+ * We check multiple paths for compatibility with different VS Code versions
+ * and non-standard notebook formats.
  */
 function getSlideType(cell: vscode.NotebookCell): SlideType | undefined {
   const meta = cell.metadata as Record<string, unknown> | undefined;
@@ -30,7 +33,34 @@ function getSlideType(cell: vscode.NotebookCell): SlideType | undefined {
     return undefined;
   }
 
-  // Standard Jupyter location
+  // Modern VS Code: vscode.ipynb nests Jupyter metadata under "metadata"
+  const innerMeta = meta["metadata"] as Record<string, unknown> | undefined;
+  if (innerMeta) {
+    const slideshow = innerMeta["slideshow"] as
+      | Record<string, unknown>
+      | undefined;
+    if (slideshow && typeof slideshow["slide_type"] === "string") {
+      return slideshow["slide_type"] as SlideType;
+    }
+  }
+
+  // Legacy VS Code: older versions used a "custom" wrapper
+  const custom = meta["custom"] as Record<string, unknown> | undefined;
+  if (custom) {
+    const customMeta = custom["metadata"] as
+      | Record<string, unknown>
+      | undefined;
+    if (customMeta) {
+      const slideshow = customMeta["slideshow"] as
+        | Record<string, unknown>
+        | undefined;
+      if (slideshow && typeof slideshow["slide_type"] === "string") {
+        return slideshow["slide_type"] as SlideType;
+      }
+    }
+  }
+
+  // Direct path (forward compatibility / non-standard formats)
   const slideshow = meta["slideshow"] as
     | Record<string, unknown>
     | undefined;
@@ -38,7 +68,7 @@ function getSlideType(cell: vscode.NotebookCell): SlideType | undefined {
     return slideshow["slide_type"] as SlideType;
   }
 
-  // Some exporters flatten it
+  // Flattened (some exporters)
   if (typeof meta["slide_type"] === "string") {
     return meta["slide_type"] as SlideType;
   }
