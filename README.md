@@ -11,7 +11,12 @@ using the standard slideshow cell metadata (the same metadata used by RISE and
 - **Next / Previous Fragment** — finer-grained navigation that also stops at
   cells tagged as `fragment`.
 - **First / Last Slide** — jump to the beginning or end of the deck.
+- **Toggle Slide View** — insert vertical spacer cells between slide boundaries
+  so each slide fills roughly one viewport height, creating a "slide deck" feel.
+  Spacers are automatically removed before save and re-inserted after, so they
+  never persist to disk.
 - **Status bar indicator** — shows your current position (e.g. "Slide 12/47").
+  Displays a layout icon when slide view is active.
 
 ## Keybindings
 
@@ -23,16 +28,18 @@ using the standard slideshow cell metadata (the same metadata used by RISE and
 | Previous Fragment     | `Ctrl+Shift+Up`           | `Cmd+Shift+Up`            |
 | First Slide          | `Ctrl+Shift+Home`         | `Cmd+Shift+Home`          |
 | Last Slide           | `Ctrl+Shift+End`          | `Cmd+Shift+End`           |
+| Toggle Slide View    | `Ctrl+Shift+/`            | `Cmd+Shift+/`             |
 
 All keybindings are active only when a notebook editor is focused.
 
 ## Configuration
 
-| Setting                              | Default | Description                                              |
-| ------------------------------------ | ------- | -------------------------------------------------------- |
-| `jupyterSlideNav.includeSubslides`   | `true`  | Whether slide navigation stops at subslides too.         |
-| `jupyterSlideNav.showStatusBar`      | `true`  | Show the slide position indicator in the status bar.     |
-| `jupyterSlideNav.skipCellTypes`      | `[]`    | Slide types to skip (e.g. `["skip", "notes"]`).         |
+| Setting                                 | Default  | Description                                              |
+| --------------------------------------- | -------- | -------------------------------------------------------- |
+| `jupyterSlideNav.includeSubslides`      | `true`   | Whether slide navigation stops at subslides too.         |
+| `jupyterSlideNav.showStatusBar`         | `true`   | Show the slide position indicator in the status bar.     |
+| `jupyterSlideNav.skipCellTypes`         | `[]`     | Slide types to skip (e.g. `["skip", "notes"]`).         |
+| `jupyterSlideNav.slideViewSpacerHeight` | `"85vh"` | CSS height for spacer cells in slide view.               |
 
 ## Slide Metadata
 
@@ -63,14 +70,14 @@ Download the latest `.vsix` from the
 install it:
 
 ```bash
-code --install-extension jupyter-slide-nav-0.1.0.vsix
+code --install-extension jupyter-slide-nav-0.2.0.vsix
 ```
 
 Or using the GitHub CLI:
 
 ```bash
-gh release download v0.1.0 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
-code --install-extension jupyter-slide-nav-0.1.0.vsix
+gh release download v0.2.0 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
+code --install-extension jupyter-slide-nav-0.2.0.vsix
 ```
 
 ### From Source
@@ -81,7 +88,7 @@ cd jupyter-slide-nav
 npm install
 npm run compile
 npm run package
-code --install-extension jupyter-slide-nav-0.1.0.vsix
+code --install-extension jupyter-slide-nav-0.2.0.vsix
 ```
 
 ### For Development

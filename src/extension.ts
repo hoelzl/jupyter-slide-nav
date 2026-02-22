@@ -14,6 +14,47 @@ const FRAGMENT_TYPES: ReadonlySet<SlideType> = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+// Slide view state
+// ---------------------------------------------------------------------------
+
+/** Tracks which notebooks have slide view active (keyed by notebook URI string). */
+const slideViewState = new Map<string, boolean>();
+
+/**
+ * Track notebooks that had slide view active at save time so we can
+ * re-insert spacers after save completes.
+ */
+const slideViewPendingReinsert = new Set<string>();
+
+/** Check if a cell is a spacer inserted by slide view. */
+function isSpacerCell(cell: vscode.NotebookCell): boolean {
+  const meta = cell.metadata as Record<string, unknown> | undefined;
+  if (!meta) {
+    return false;
+  }
+  const marker = meta["jupyterSlideNav"] as
+    | Record<string, unknown>
+    | undefined;
+  return marker?.["spacer"] === true;
+}
+
+/** Create cell data for a spacer markdown cell. */
+function createSpacerCellData(height: string): vscode.NotebookCellData {
+  const cellData = new vscode.NotebookCellData(
+    vscode.NotebookCellKind.Markup,
+    `<div style="min-height:${height}"></div>`,
+    "markdown"
+  );
+  cellData.metadata = {
+    jupyterSlideNav: { spacer: true },
+    metadata: {
+      slideshow: { slide_type: "skip" },
+    },
+  };
+  return cellData;
+}
+
+// ---------------------------------------------------------------------------
 // Metadata extraction
 // ---------------------------------------------------------------------------
 
@@ -110,6 +151,9 @@ function buildSlideIndex(
 
   for (let i = 0; i < notebook.cellCount; i++) {
     const cell = notebook.cellAt(i);
+    if (isSpacerCell(cell)) {
+      continue;
+    }
     const slideType = getSlideType(cell);
 
     if (!slideType || slideType === "-") {
@@ -304,7 +348,9 @@ function updateStatusBar(
       getSlideType(editor.notebook.cellAt(s.cellIndex)) === "subslide"
   ).length;
 
-  bar.text = `$(telescope) Slide ${current.slideNumber}/${totalSlides}`;
+  const isSlideView = slideViewState.get(editor.notebook.uri.toString());
+  const icon = isSlideView ? "$(telescope) $(layout) " : "$(telescope) ";
+  bar.text = `${icon}Slide ${current.slideNumber}/${totalSlides}`;
   bar.show();
 }
 
@@ -342,6 +388,87 @@ function refreshStatusBarForSelection(editor: vscode.NotebookEditor): void {
 }
 
 // ---------------------------------------------------------------------------
+// Slide view — insert / remove spacer cells
+// ---------------------------------------------------------------------------
+
+/**
+ * Insert spacer cells before each slide boundary (except the first).
+ * Processes from bottom to top so that earlier indices remain valid.
+ */
+async function insertSpacers(
+  notebook: vscode.NotebookDocument
+): Promise<void> {
+  const config = vscode.workspace.getConfiguration("jupyterSlideNav");
+  const height = config.get<string>("slideViewSpacerHeight", "85vh");
+  const index = buildSlideIndex(notebook, SLIDE_TYPES, config);
+
+  if (index.length <= 1) {
+    return;
+  }
+
+  const edit = new vscode.WorkspaceEdit();
+
+  // Skip the first slide — we only insert spacers *before* subsequent slides.
+  for (let i = index.length - 1; i >= 1; i--) {
+    const cellData = createSpacerCellData(height);
+    const notebookEdit = vscode.NotebookEdit.insertCells(
+      index[i].cellIndex,
+      [cellData]
+    );
+    edit.set(notebook.uri, [notebookEdit]);
+  }
+
+  await vscode.workspace.applyEdit(edit);
+}
+
+/**
+ * Remove all spacer cells from a notebook.
+ * Processes from bottom to top so that earlier indices remain valid.
+ */
+async function removeSpacers(
+  notebook: vscode.NotebookDocument
+): Promise<void> {
+  const edit = new vscode.WorkspaceEdit();
+  const deletions: vscode.NotebookEdit[] = [];
+
+  for (let i = notebook.cellCount - 1; i >= 0; i--) {
+    if (isSpacerCell(notebook.cellAt(i))) {
+      deletions.push(vscode.NotebookEdit.deleteCells(new vscode.NotebookRange(i, i + 1)));
+    }
+  }
+
+  if (deletions.length === 0) {
+    return;
+  }
+
+  edit.set(notebook.uri, deletions);
+  await vscode.workspace.applyEdit(edit);
+}
+
+/** Toggle slide view for the active notebook. */
+async function toggleSlideView(): Promise<void> {
+  const editor = vscode.window.activeNotebookEditor;
+  if (!editor) {
+    return;
+  }
+
+  const uri = editor.notebook.uri.toString();
+  const isActive = slideViewState.get(uri) ?? false;
+
+  if (isActive) {
+    await removeSpacers(editor.notebook);
+    slideViewState.set(uri, false);
+  } else {
+    await insertSpacers(editor.notebook);
+    slideViewState.set(uri, true);
+    firstSlide();
+  }
+
+  // Refresh status bar to reflect the slide view icon change.
+  refreshStatusBarForSelection(editor);
+}
+
+// ---------------------------------------------------------------------------
 // Activation
 // ---------------------------------------------------------------------------
 
@@ -360,7 +487,11 @@ export function activate(context: vscode.ExtensionContext): void {
       prevSlide(FRAGMENT_TYPES)
     ),
     vscode.commands.registerCommand("jupyterSlideNav.firstSlide", firstSlide),
-    vscode.commands.registerCommand("jupyterSlideNav.lastSlide", lastSlide)
+    vscode.commands.registerCommand("jupyterSlideNav.lastSlide", lastSlide),
+    vscode.commands.registerCommand(
+      "jupyterSlideNav.toggleSlideView",
+      toggleSlideView
+    )
   );
 
   // Update status bar when the active notebook editor or selection changes.
@@ -380,13 +511,62 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  // Remove spacers before save so they never persist to disk.
+  context.subscriptions.push(
+    vscode.workspace.onWillSaveNotebookDocument((e) => {
+      const uri = e.notebook.uri.toString();
+      if (slideViewState.get(uri)) {
+        slideViewPendingReinsert.add(uri);
+        e.waitUntil(removeSpacers(e.notebook));
+      }
+    })
+  );
+
+  // Re-insert spacers after save completes.
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveNotebookDocument((notebook) => {
+      const uri = notebook.uri.toString();
+      if (slideViewPendingReinsert.has(uri)) {
+        slideViewPendingReinsert.delete(uri);
+        insertSpacers(notebook);
+      }
+    })
+  );
+
+  // Clean up state when a notebook is closed.
+  context.subscriptions.push(
+    vscode.workspace.onDidCloseNotebookDocument((notebook) => {
+      const uri = notebook.uri.toString();
+      slideViewState.delete(uri);
+      slideViewPendingReinsert.delete(uri);
+    })
+  );
+
   // If a notebook is already open when the extension activates, show status.
   if (vscode.window.activeNotebookEditor) {
     refreshStatusBarForSelection(vscode.window.activeNotebookEditor);
+  }
+
+  // Orphan cleanup: remove any spacer cells left from a previous session
+  // (e.g., VS Code hot exit with slide view active).
+  if (vscode.window.activeNotebookEditor) {
+    const notebook = vscode.window.activeNotebookEditor.notebook;
+    let hasOrphans = false;
+    for (let i = 0; i < notebook.cellCount; i++) {
+      if (isSpacerCell(notebook.cellAt(i))) {
+        hasOrphans = true;
+        break;
+      }
+    }
+    if (hasOrphans) {
+      removeSpacers(notebook);
+    }
   }
 }
 
 export function deactivate(): void {
   statusBarItem?.dispose();
   statusBarItem = undefined;
+  slideViewState.clear();
+  slideViewPendingReinsert.clear();
 }
