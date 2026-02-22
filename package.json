@@ -2,7 +2,7 @@
   "name": "jupyter-slide-nav",
   "displayName": "Jupyter Slide Navigator",
   "description": "Navigate Jupyter notebooks slide-by-slide using slideshow metadata. Jump to the next or previous cell tagged as 'slide' or 'subslide'.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "hoelzl",
   "license": "MIT",
   "engines": {

@@ -38,7 +38,30 @@ function isSpacerCell(cell: vscode.NotebookCell): boolean {
   return marker?.["spacer"] === true;
 }
 
-/** Create cell data for a spacer markdown cell. */
+/** Metadata shared by all spacer cells (sentinel and spacer). */
+const SPACER_METADATA = {
+  jupyterSlideNav: { spacer: true },
+  metadata: {
+    slideshow: { slide_type: "skip" },
+  },
+};
+
+/**
+ * Create a small sentinel cell placed right after the last cell of a slide.
+ * When Shift+Enter advances into this cell the view barely scrolls, keeping
+ * the slide content visible.
+ */
+function createSentinelCellData(): vscode.NotebookCellData {
+  const cellData = new vscode.NotebookCellData(
+    vscode.NotebookCellKind.Markup,
+    "&nbsp;",
+    "markdown"
+  );
+  cellData.metadata = { ...SPACER_METADATA };
+  return cellData;
+}
+
+/** Create the large spacer cell that provides visual separation between slides. */
 function createSpacerCellData(lines: number): vscode.NotebookCellData {
   // Use &nbsp; paragraphs instead of CSS height — VS Code's notebook virtual
   // scroller cannot estimate CSS-based cell heights, which causes all cells
@@ -49,12 +72,7 @@ function createSpacerCellData(lines: number): vscode.NotebookCellData {
     content,
     "markdown"
   );
-  cellData.metadata = {
-    jupyterSlideNav: { spacer: true },
-    metadata: {
-      slideshow: { slide_type: "skip" },
-    },
-  };
+  cellData.metadata = { ...SPACER_METADATA };
   return cellData;
 }
 
@@ -414,10 +432,14 @@ async function insertSpacers(
   const insertions: vscode.NotebookEdit[] = [];
 
   // Skip the first slide — we only insert spacers *before* subsequent slides.
+  // Each boundary gets a sentinel + spacer pair: the sentinel is a tiny cell
+  // so that Shift+Enter doesn't scroll the slide off-screen; the spacer
+  // provides the visual gap.
   for (let i = index.length - 1; i >= 1; i--) {
-    const cellData = createSpacerCellData(lines);
+    const sentinel = createSentinelCellData();
+    const spacer = createSpacerCellData(lines);
     insertions.push(
-      vscode.NotebookEdit.insertCells(index[i].cellIndex, [cellData])
+      vscode.NotebookEdit.insertCells(index[i].cellIndex, [sentinel, spacer])
     );
   }
 
