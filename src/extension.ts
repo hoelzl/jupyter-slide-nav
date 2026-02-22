@@ -407,17 +407,17 @@ async function insertSpacers(
   }
 
   const edit = new vscode.WorkspaceEdit();
+  const insertions: vscode.NotebookEdit[] = [];
 
   // Skip the first slide — we only insert spacers *before* subsequent slides.
   for (let i = index.length - 1; i >= 1; i--) {
     const cellData = createSpacerCellData(height);
-    const notebookEdit = vscode.NotebookEdit.insertCells(
-      index[i].cellIndex,
-      [cellData]
+    insertions.push(
+      vscode.NotebookEdit.insertCells(index[i].cellIndex, [cellData])
     );
-    edit.set(notebook.uri, [notebookEdit]);
   }
 
+  edit.set(notebook.uri, insertions);
   await vscode.workspace.applyEdit(edit);
 }
 
