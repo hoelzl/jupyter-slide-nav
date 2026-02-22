@@ -20,52 +20,43 @@ const FRAGMENT_TYPES: ReadonlySet<SlideType> = new Set([
 /** Tracks which notebooks have slide view active (keyed by notebook URI string). */
 const slideViewState = new Map<string, boolean>();
 
-/**
- * Track notebooks that had slide view active at save time so we can
- * re-insert spacers after save completes.
- */
-const slideViewPendingReinsert = new Set<string>();
-
-/**
- * Stores the user's content-cell index (position among non-spacer cells)
- * during a save cycle so we can restore their position after spacers
- * are re-inserted. Keyed by notebook URI string.
- */
-const slideViewSavedContentIndex = new Map<string, number>();
-
-/**
- * Find the NotebookEditor displaying the given notebook document.
- * Returns undefined if no editor is currently showing this notebook.
- */
-function findEditorForNotebook(
-  notebook: vscode.NotebookDocument
-): vscode.NotebookEditor | undefined {
-  const uri = notebook.uri.toString();
-  const active = vscode.window.activeNotebookEditor;
-  if (active && active.notebook.uri.toString() === uri) {
-    return active;
-  }
-  return vscode.window.visibleNotebookEditors.find(
-    (e) => e.notebook.uri.toString() === uri
-  );
-}
-
 /** Check if a cell is a spacer inserted by slide view. */
 function isSpacerCell(cell: vscode.NotebookCell): boolean {
   const meta = cell.metadata as Record<string, unknown> | undefined;
   if (!meta) {
     return false;
   }
-  const marker = meta["jupyterSlideNav"] as
+
+  // Check top level (cells just created in the editor).
+  const topMarker = meta["jupyterSlideNav"] as
     | Record<string, unknown>
     | undefined;
-  return marker?.["spacer"] === true;
+  if (topMarker?.["spacer"] === true) {
+    return true;
+  }
+
+  // Check nested path (cells loaded from disk — the Jupyter serializer
+  // wraps cell metadata under an inner "metadata" key).
+  const innerMeta = meta["metadata"] as
+    | Record<string, unknown>
+    | undefined;
+  if (innerMeta) {
+    const nestedMarker = innerMeta["jupyterSlideNav"] as
+      | Record<string, unknown>
+      | undefined;
+    if (nestedMarker?.["spacer"] === true) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /** Metadata shared by all spacer cells (sentinel and spacer). */
 const SPACER_METADATA = {
   jupyterSlideNav: { spacer: true },
   metadata: {
+    jupyterSlideNav: { spacer: true },
     slideshow: { slide_type: "skip" },
   },
 };
@@ -561,83 +552,11 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
-  // Remove spacers before save so they never persist to disk.
-  context.subscriptions.push(
-    vscode.workspace.onWillSaveNotebookDocument((e) => {
-      const uri = e.notebook.uri.toString();
-      if (slideViewState.get(uri)) {
-        slideViewPendingReinsert.add(uri);
-
-        // Save the user's position as a content-cell index (ignoring spacers)
-        // so we can restore it after spacers are re-inserted.
-        const editor = findEditorForNotebook(e.notebook);
-        if (editor) {
-          const currentIndex = getCurrentCellIndex(editor);
-          let contentIndex = 0;
-          for (let i = 0; i < currentIndex; i++) {
-            if (!isSpacerCell(e.notebook.cellAt(i))) {
-              contentIndex++;
-            }
-          }
-          slideViewSavedContentIndex.set(uri, contentIndex);
-        }
-
-        e.waitUntil(removeSpacers(e.notebook));
-      }
-    })
-  );
-
-  // Re-insert spacers after save completes.
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveNotebookDocument(async (notebook) => {
-      const uri = notebook.uri.toString();
-      if (slideViewPendingReinsert.has(uri)) {
-        slideViewPendingReinsert.delete(uri);
-        const savedContentIndex = slideViewSavedContentIndex.get(uri);
-        slideViewSavedContentIndex.delete(uri);
-
-        await insertSpacers(notebook);
-
-        // Restore the user's position after spacers have been re-inserted.
-        if (savedContentIndex !== undefined) {
-          const editor = findEditorForNotebook(notebook);
-          if (editor) {
-            let contentCount = 0;
-            let targetCellIndex = 0;
-            for (let i = 0; i < notebook.cellCount; i++) {
-              if (!isSpacerCell(notebook.cellAt(i))) {
-                if (contentCount === savedContentIndex) {
-                  targetCellIndex = i;
-                  break;
-                }
-                contentCount++;
-              }
-            }
-            // If saved index exceeds available cells, clamp to last content cell.
-            if (contentCount < savedContentIndex) {
-              for (let i = notebook.cellCount - 1; i >= 0; i--) {
-                if (!isSpacerCell(notebook.cellAt(i))) {
-                  targetCellIndex = i;
-                  break;
-                }
-              }
-            }
-
-            navigateToCell(editor, targetCellIndex);
-            refreshStatusBarForSelection(editor);
-          }
-        }
-      }
-    })
-  );
-
   // Clean up state when a notebook is closed.
   context.subscriptions.push(
     vscode.workspace.onDidCloseNotebookDocument((notebook) => {
       const uri = notebook.uri.toString();
       slideViewState.delete(uri);
-      slideViewPendingReinsert.delete(uri);
-      slideViewSavedContentIndex.delete(uri);
     })
   );
 
@@ -646,19 +565,15 @@ export function activate(context: vscode.ExtensionContext): void {
     refreshStatusBarForSelection(vscode.window.activeNotebookEditor);
   }
 
-  // Orphan cleanup: remove any spacer cells left from a previous session
-  // (e.g., VS Code hot exit with slide view active).
+  // If the notebook was saved with slide view active, spacer cells will
+  // still be present on disk. Detect them and restore slide view state.
   if (vscode.window.activeNotebookEditor) {
     const notebook = vscode.window.activeNotebookEditor.notebook;
-    let hasOrphans = false;
     for (let i = 0; i < notebook.cellCount; i++) {
       if (isSpacerCell(notebook.cellAt(i))) {
-        hasOrphans = true;
+        slideViewState.set(notebook.uri.toString(), true);
         break;
       }
-    }
-    if (hasOrphans) {
-      removeSpacers(notebook);
     }
   }
 }
@@ -667,6 +582,4 @@ export function deactivate(): void {
   statusBarItem?.dispose();
   statusBarItem = undefined;
   slideViewState.clear();
-  slideViewPendingReinsert.clear();
-  slideViewSavedContentIndex.clear();
 }
