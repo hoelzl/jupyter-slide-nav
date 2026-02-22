@@ -1,0 +1,134 @@
+{
+  "name": "jupyter-slide-nav",
+  "displayName": "Jupyter Slide Navigator",
+  "description": "Navigate Jupyter notebooks slide-by-slide using slideshow metadata. Jump to the next or previous cell tagged as 'slide' or 'subslide'.",
+  "version": "0.1.0",
+  "publisher": "hoelzl",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Notebooks",
+    "Education"
+  ],
+  "keywords": [
+    "jupyter",
+    "notebook",
+    "slides",
+    "presentation",
+    "RISE"
+  ],
+  "activationEvents": [
+    "onNotebook:jupyter-notebook"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "jupyterSlideNav.nextSlide",
+        "title": "Go to Next Slide",
+        "category": "Slide Navigator"
+      },
+      {
+        "command": "jupyterSlideNav.prevSlide",
+        "title": "Go to Previous Slide",
+        "category": "Slide Navigator"
+      },
+      {
+        "command": "jupyterSlideNav.nextFragment",
+        "title": "Go to Next Slide or Fragment",
+        "category": "Slide Navigator"
+      },
+      {
+        "command": "jupyterSlideNav.prevFragment",
+        "title": "Go to Previous Slide or Fragment",
+        "category": "Slide Navigator"
+      },
+      {
+        "command": "jupyterSlideNav.firstSlide",
+        "title": "Go to First Slide",
+        "category": "Slide Navigator"
+      },
+      {
+        "command": "jupyterSlideNav.lastSlide",
+        "title": "Go to Last Slide",
+        "category": "Slide Navigator"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "jupyterSlideNav.nextSlide",
+        "key": "ctrl+shift+pagedown",
+        "mac": "cmd+shift+pagedown",
+        "when": "notebookEditorFocused"
+      },
+      {
+        "command": "jupyterSlideNav.prevSlide",
+        "key": "ctrl+shift+pageup",
+        "mac": "cmd+shift+pageup",
+        "when": "notebookEditorFocused"
+      },
+      {
+        "command": "jupyterSlideNav.nextFragment",
+        "key": "ctrl+shift+down",
+        "mac": "cmd+shift+down",
+        "when": "notebookEditorFocused"
+      },
+      {
+        "command": "jupyterSlideNav.prevFragment",
+        "key": "ctrl+shift+up",
+        "mac": "cmd+shift+up",
+        "when": "notebookEditorFocused"
+      },
+      {
+        "command": "jupyterSlideNav.firstSlide",
+        "key": "ctrl+shift+home",
+        "mac": "cmd+shift+home",
+        "when": "notebookEditorFocused"
+      },
+      {
+        "command": "jupyterSlideNav.lastSlide",
+        "key": "ctrl+shift+end",
+        "mac": "cmd+shift+end",
+        "when": "notebookEditorFocused"
+      }
+    ],
+    "configuration": {
+      "title": "Jupyter Slide Navigator",
+      "properties": {
+        "jupyterSlideNav.includeSubslides": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether next/prev slide commands also stop at subslides (not just slides)."
+        },
+        "jupyterSlideNav.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a status bar item with the current slide position."
+        },
+        "jupyterSlideNav.skipCellTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["skip", "notes"]
+          },
+          "default": [],
+          "description": "Slide types to skip during navigation. For example, ['skip', 'notes'] will jump over cells tagged as 'skip' or 'notes'."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}
