@@ -39,10 +39,14 @@ function isSpacerCell(cell: vscode.NotebookCell): boolean {
 }
 
 /** Create cell data for a spacer markdown cell. */
-function createSpacerCellData(height: string): vscode.NotebookCellData {
+function createSpacerCellData(lines: number): vscode.NotebookCellData {
+  // Use &nbsp; paragraphs instead of CSS height — VS Code's notebook virtual
+  // scroller cannot estimate CSS-based cell heights, which causes all cells
+  // after a CSS-sized spacer to become unreachable.
+  const content = Array(lines).fill("&nbsp;").join("\n\n");
   const cellData = new vscode.NotebookCellData(
     vscode.NotebookCellKind.Markup,
-    `<div style="min-height:${height}"></div>`,
+    content,
     "markdown"
   );
   cellData.metadata = {
@@ -399,7 +403,7 @@ async function insertSpacers(
   notebook: vscode.NotebookDocument
 ): Promise<void> {
   const config = vscode.workspace.getConfiguration("jupyterSlideNav");
-  const height = config.get<string>("slideViewSpacerHeight", "85vh");
+  const lines = config.get<number>("slideViewSpacerLines", 40);
   const index = buildSlideIndex(notebook, SLIDE_TYPES, config);
 
   if (index.length <= 1) {
@@ -411,7 +415,7 @@ async function insertSpacers(
 
   // Skip the first slide — we only insert spacers *before* subsequent slides.
   for (let i = index.length - 1; i >= 1; i--) {
-    const cellData = createSpacerCellData(height);
+    const cellData = createSpacerCellData(lines);
     insertions.push(
       vscode.NotebookEdit.insertCells(index[i].cellIndex, [cellData])
     );

@@ -2,7 +2,7 @@
   "name": "jupyter-slide-nav",
   "displayName": "Jupyter Slide Navigator",
   "description": "Navigate Jupyter notebooks slide-by-slide using slideshow metadata. Jump to the next or previous cell tagged as 'slide' or 'subslide'.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "hoelzl",
   "license": "MIT",
   "engines": {
@@ -127,10 +127,12 @@
           "default": [],
           "description": "Slide types to skip during navigation. For example, ['skip', 'notes'] will jump over cells tagged as 'skip' or 'notes'."
         },
-        "jupyterSlideNav.slideViewSpacerHeight": {
-          "type": "string",
-          "default": "85vh",
-          "description": "CSS height value for spacer cells inserted by Toggle Slide View."
+        "jupyterSlideNav.slideViewSpacerLines": {
+          "type": "integer",
+          "default": 40,
+          "minimum": 5,
+          "maximum": 200,
+          "description": "Number of blank lines in spacer cells inserted by Toggle Slide View."
         }
       }
     }

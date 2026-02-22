@@ -39,7 +39,7 @@ All keybindings are active only when a notebook editor is focused.
 | `jupyterSlideNav.includeSubslides`      | `true`   | Whether slide navigation stops at subslides too.         |
 | `jupyterSlideNav.showStatusBar`         | `true`   | Show the slide position indicator in the status bar.     |
 | `jupyterSlideNav.skipCellTypes`         | `[]`     | Slide types to skip (e.g. `["skip", "notes"]`).         |
-| `jupyterSlideNav.slideViewSpacerHeight` | `"85vh"` | CSS height for spacer cells in slide view.               |
+| `jupyterSlideNav.slideViewSpacerLines`  | `40`     | Number of blank lines in spacer cells for slide view.    |
 
 ## Slide Metadata
 
