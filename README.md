@@ -74,11 +74,11 @@ code --install-extension jupyter-slide-nav-0.1.0.vsix
 git clone <repo-url>
 cd jupyter-slide-nav
 npm install
-npm run compile
 ```
 
-Then press `F5` in VS Code to launch an Extension Development Host with the
-extension loaded.
+Open the folder in VS Code, then press `F5` to compile and launch an Extension
+Development Host with the extension loaded. Use `npm run watch` for automatic
+recompilation during development.
 
 ## License
 
