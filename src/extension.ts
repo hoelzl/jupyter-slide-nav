@@ -26,6 +26,30 @@ const slideViewState = new Map<string, boolean>();
  */
 const slideViewPendingReinsert = new Set<string>();
 
+/**
+ * Stores the user's content-cell index (position among non-spacer cells)
+ * during a save cycle so we can restore their position after spacers
+ * are re-inserted. Keyed by notebook URI string.
+ */
+const slideViewSavedContentIndex = new Map<string, number>();
+
+/**
+ * Find the NotebookEditor displaying the given notebook document.
+ * Returns undefined if no editor is currently showing this notebook.
+ */
+function findEditorForNotebook(
+  notebook: vscode.NotebookDocument
+): vscode.NotebookEditor | undefined {
+  const uri = notebook.uri.toString();
+  const active = vscode.window.activeNotebookEditor;
+  if (active && active.notebook.uri.toString() === uri) {
+    return active;
+  }
+  return vscode.window.visibleNotebookEditors.find(
+    (e) => e.notebook.uri.toString() === uri
+  );
+}
+
 /** Check if a cell is a spacer inserted by slide view. */
 function isSpacerCell(cell: vscode.NotebookCell): boolean {
   const meta = cell.metadata as Record<string, unknown> | undefined;
@@ -543,6 +567,21 @@ export function activate(context: vscode.ExtensionContext): void {
       const uri = e.notebook.uri.toString();
       if (slideViewState.get(uri)) {
         slideViewPendingReinsert.add(uri);
+
+        // Save the user's position as a content-cell index (ignoring spacers)
+        // so we can restore it after spacers are re-inserted.
+        const editor = findEditorForNotebook(e.notebook);
+        if (editor) {
+          const currentIndex = getCurrentCellIndex(editor);
+          let contentIndex = 0;
+          for (let i = 0; i < currentIndex; i++) {
+            if (!isSpacerCell(e.notebook.cellAt(i))) {
+              contentIndex++;
+            }
+          }
+          slideViewSavedContentIndex.set(uri, contentIndex);
+        }
+
         e.waitUntil(removeSpacers(e.notebook));
       }
     })
@@ -550,11 +589,44 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Re-insert spacers after save completes.
   context.subscriptions.push(
-    vscode.workspace.onDidSaveNotebookDocument((notebook) => {
+    vscode.workspace.onDidSaveNotebookDocument(async (notebook) => {
       const uri = notebook.uri.toString();
       if (slideViewPendingReinsert.has(uri)) {
         slideViewPendingReinsert.delete(uri);
-        insertSpacers(notebook);
+        const savedContentIndex = slideViewSavedContentIndex.get(uri);
+        slideViewSavedContentIndex.delete(uri);
+
+        await insertSpacers(notebook);
+
+        // Restore the user's position after spacers have been re-inserted.
+        if (savedContentIndex !== undefined) {
+          const editor = findEditorForNotebook(notebook);
+          if (editor) {
+            let contentCount = 0;
+            let targetCellIndex = 0;
+            for (let i = 0; i < notebook.cellCount; i++) {
+              if (!isSpacerCell(notebook.cellAt(i))) {
+                if (contentCount === savedContentIndex) {
+                  targetCellIndex = i;
+                  break;
+                }
+                contentCount++;
+              }
+            }
+            // If saved index exceeds available cells, clamp to last content cell.
+            if (contentCount < savedContentIndex) {
+              for (let i = notebook.cellCount - 1; i >= 0; i--) {
+                if (!isSpacerCell(notebook.cellAt(i))) {
+                  targetCellIndex = i;
+                  break;
+                }
+              }
+            }
+
+            navigateToCell(editor, targetCellIndex);
+            refreshStatusBarForSelection(editor);
+          }
+        }
       }
     })
   );
@@ -565,6 +637,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const uri = notebook.uri.toString();
       slideViewState.delete(uri);
       slideViewPendingReinsert.delete(uri);
+      slideViewSavedContentIndex.delete(uri);
     })
   );
 
@@ -595,4 +668,5 @@ export function deactivate(): void {
   statusBarItem = undefined;
   slideViewState.clear();
   slideViewPendingReinsert.clear();
+  slideViewSavedContentIndex.clear();
 }
