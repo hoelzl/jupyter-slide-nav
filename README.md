@@ -56,22 +56,38 @@ You can set these tags using:
 
 ## Installation
 
-### From VSIX
+### From GitHub Release
+
+Download the latest `.vsix` from the
+[Releases](https://github.com/hoelzl/jupyter-slide-nav/releases) page and
+install it:
 
 ```bash
-# Build the extension
-npm install
-npm run compile
-npm run package
-
-# Install the resulting .vsix file
 code --install-extension jupyter-slide-nav-0.1.0.vsix
 ```
 
-### For development
+Or using the GitHub CLI:
 
 ```bash
-git clone <repo-url>
+gh release download v0.1.0 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
+code --install-extension jupyter-slide-nav-0.1.0.vsix
+```
+
+### From Source
+
+```bash
+git clone https://github.com/hoelzl/jupyter-slide-nav.git
+cd jupyter-slide-nav
+npm install
+npm run compile
+npm run package
+code --install-extension jupyter-slide-nav-0.1.0.vsix
+```
+
+### For Development
+
+```bash
+git clone https://github.com/hoelzl/jupyter-slide-nav.git
 cd jupyter-slide-nav
 npm install
 ```
