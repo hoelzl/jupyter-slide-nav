@@ -11,10 +11,11 @@ using the standard slideshow cell metadata (the same metadata used by RISE and
 - **Next / Previous Fragment** — finer-grained navigation that also stops at
   cells tagged as `fragment`.
 - **First / Last Slide** — jump to the beginning or end of the deck.
-- **Toggle Slide View** — insert vertical spacer cells between slide boundaries
-  so each slide fills roughly one viewport height, creating a "slide deck" feel.
-  Spacers are automatically removed before save and re-inserted after, so they
-  never persist to disk.
+- **Toggle Slide View** — insert spacer cells between slide boundaries so each
+  slide fills roughly one viewport height, creating a "slide deck" feel. Each
+  boundary gets a small sentinel cell (so Shift+Enter doesn't scroll the slide
+  away) followed by a large spacer. Spacers are automatically removed before
+  save and re-inserted after, so they never persist to disk.
 - **Status bar indicator** — shows your current position (e.g. "Slide 12/47").
   Displays a layout icon when slide view is active.
 
@@ -70,14 +71,14 @@ Download the latest `.vsix` from the
 install it:
 
 ```bash
-code --install-extension jupyter-slide-nav-0.2.0.vsix
+code --install-extension jupyter-slide-nav-0.2.2.vsix
 ```
 
 Or using the GitHub CLI:
 
 ```bash
-gh release download v0.2.0 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
-code --install-extension jupyter-slide-nav-0.2.0.vsix
+gh release download v0.2.2 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
+code --install-extension jupyter-slide-nav-0.2.2.vsix
 ```
 
 ### From Source
@@ -88,7 +89,7 @@ cd jupyter-slide-nav
 npm install
 npm run compile
 npm run package
-code --install-extension jupyter-slide-nav-0.2.0.vsix
+code --install-extension jupyter-slide-nav-0.2.2.vsix
 ```
 
 ### For Development

@@ -16,13 +16,13 @@ No test framework is currently configured.
 
 ## Architecture
 
-Single-file implementation in `src/extension.ts` (~570 lines), compiled to `out/extension.js`. Zero runtime dependencies — only VS Code API.
+Single-file implementation in `src/extension.ts` (~590 lines), compiled to `out/extension.js`. Zero runtime dependencies — only VS Code API.
 
 The file is organized into sections:
 
 1. **Types & constants** — `SlideType` union type; `SLIDE_TYPES` (slide/subslide) and `FRAGMENT_TYPES` (slide/subslide/fragment) sets define navigation targets for the two command granularities.
 
-2. **Slide view state** — `slideViewState` map tracks which notebooks have slide view active (keyed by URI). `slideViewPendingReinsert` set tracks notebooks needing spacer re-insertion after save. `isSpacerCell()` detects spacer cells via `jupyterSlideNav.spacer` metadata marker. `createSpacerCellData()` builds markdown cells with a tall `<div>` and `slide_type: "skip"` metadata.
+2. **Slide view state** — `slideViewState` map tracks which notebooks have slide view active (keyed by URI). `slideViewPendingReinsert` set tracks notebooks needing spacer re-insertion after save. `isSpacerCell()` detects spacer cells via `jupyterSlideNav.spacer` metadata marker. `createSentinelCellData()` builds a tiny 1-line markdown cell; `createSpacerCellData()` builds a large markdown cell with `&nbsp;` paragraphs for content-based spacing. Both share `SPACER_METADATA` (includes `slide_type: "skip"`).
 
 3. **Metadata extraction** — `getSlideType()` reads `cell.metadata.slideshow.slide_type` with fallback to `cell.metadata.slide_type` for non-standard notebook formats.
 
@@ -32,7 +32,7 @@ The file is organized into sections:
 
 6. **Status bar** — Singleton `StatusBarItem` showing "Slide X/Y", updated on navigation and selection changes. Clickable (triggers nextSlide). Shows a layout icon when slide view is active.
 
-7. **Slide view** — `insertSpacers()` builds the slide index and inserts spacer markdown cells before each slide boundary (except the first), processing bottom-to-top. `removeSpacers()` deletes all cells with spacer metadata. `toggleSlideView()` is the command handler that toggles spacers on/off.
+7. **Slide view** — `insertSpacers()` builds the slide index and inserts a sentinel + spacer cell pair before each slide boundary (except the first), processing bottom-to-top. The sentinel is a tiny cell so Shift+Enter doesn't scroll the slide away; the spacer provides the visual gap. `removeSpacers()` deletes all cells with spacer metadata. `toggleSlideView()` is the command handler that toggles spacers on/off.
 
 8. **Activation** — `activate()` registers 7 commands, subscribes to editor/selection change events, and sets up save handlers (`onWillSaveNotebookDocument`/`onDidSaveNotebookDocument`) to transparently remove and re-insert spacers around saves. Also handles notebook close cleanup and orphan spacer removal on startup. `deactivate()` disposes the status bar and clears slide view state.
 

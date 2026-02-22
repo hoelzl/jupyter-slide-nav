@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2
+
+- Add sentinel cell before each spacer so Shift+Enter doesn't scroll the current slide off-screen
+- Fix spacer cells breaking notebook virtual scroller (use content-based spacing instead of CSS `min-height: 85vh`)
+- Fix `insertSpacers` only inserting one spacer cell (`WorkspaceEdit.set()` replaces, not appends)
+- Rename setting `slideViewSpacerHeight` → `slideViewSpacerLines` (integer, default `40`)
+
 ## 0.2.0
 
 - Add Toggle Slide View command (`Ctrl+Shift+/`) — inserts vertical spacer cells between slide boundaries to create a "slide deck" feel with viewport-height spacing
