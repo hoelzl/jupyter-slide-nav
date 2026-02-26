@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Let spacer cells persist to disk and fix detection after reload
+- Fix save in slide view jumping to last cell and breaking display
+
 ## 0.2.2
 
 - Add sentinel cell before each spacer so Shift+Enter doesn't scroll the current slide off-screen

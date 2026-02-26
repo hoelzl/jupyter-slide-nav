@@ -14,8 +14,9 @@ using the standard slideshow cell metadata (the same metadata used by RISE and
 - **Toggle Slide View** — insert spacer cells between slide boundaries so each
   slide fills roughly one viewport height, creating a "slide deck" feel. Each
   boundary gets a small sentinel cell (so Shift+Enter doesn't scroll the slide
-  away) followed by a large spacer. Spacers are automatically removed before
-  save and re-inserted after, so they never persist to disk.
+  away) followed by a large spacer. Spacers persist to disk (marked as
+  `slide_type: "skip"` so RISE and nbconvert ignore them) and are automatically
+  detected on reload.
 - **Status bar indicator** — shows your current position (e.g. "Slide 12/47").
   Displays a layout icon when slide view is active.
 
@@ -71,14 +72,14 @@ Download the latest `.vsix` from the
 install it:
 
 ```bash
-code --install-extension jupyter-slide-nav-0.2.2.vsix
+code --install-extension jupyter-slide-nav-0.2.3.vsix
 ```
 
 Or using the GitHub CLI:
 
 ```bash
-gh release download v0.2.2 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
-code --install-extension jupyter-slide-nav-0.2.2.vsix
+gh release download v0.2.3 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
+code --install-extension jupyter-slide-nav-0.2.3.vsix
 ```
 
 ### From Source
@@ -89,7 +90,7 @@ cd jupyter-slide-nav
 npm install
 npm run compile
 npm run package
-code --install-extension jupyter-slide-nav-0.2.2.vsix
+code --install-extension jupyter-slide-nav-0.2.3.vsix
 ```
 
 ### For Development

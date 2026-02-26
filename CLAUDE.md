@@ -39,3 +39,7 @@ The file is organized into sections:
 ## Extension Manifest (package.json)
 
 All 7 commands use the `jupyterSlideNav.*` namespace and `"Slide Navigator"` category. Keybindings are scoped to `notebookEditorFocused`. Four user-facing settings live under `jupyterSlideNav.*` configuration.
+
+## CI/CD
+
+`.github/workflows/release.yml` — GitHub Actions workflow that triggers on tag pushes matching `v*`. It checks out the repo, installs dependencies, runs `npm run package` to build the `.vsix`, and creates a GitHub release with the `.vsix` attached (using `softprops/action-gh-release@v2`). To cut a release: create an annotated tag (`git tag -a v0.x.y -m "..."`) and push it (`git push origin v0.x.y`).
