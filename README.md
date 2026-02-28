@@ -72,14 +72,14 @@ Download the latest `.vsix` from the
 install it:
 
 ```bash
-code --install-extension jupyter-slide-nav-0.2.3.vsix
+code --install-extension jupyter-slide-nav-0.2.4.vsix
 ```
 
 Or using the GitHub CLI:
 
 ```bash
-gh release download v0.2.3 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
-code --install-extension jupyter-slide-nav-0.2.3.vsix
+gh release download v0.2.4 --repo hoelzl/jupyter-slide-nav --pattern '*.vsix'
+code --install-extension jupyter-slide-nav-0.2.4.vsix
 ```
 
 ### From Source
@@ -90,7 +90,7 @@ cd jupyter-slide-nav
 npm install
 npm run compile
 npm run package
-code --install-extension jupyter-slide-nav-0.2.3.vsix
+code --install-extension jupyter-slide-nav-0.2.4.vsix
 ```
 
 ### For Development
