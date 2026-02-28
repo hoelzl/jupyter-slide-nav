@@ -5,6 +5,10 @@
   "version": "0.2.3",
   "publisher": "hoelzl",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hoelzl/jupyter-slide-nav.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
