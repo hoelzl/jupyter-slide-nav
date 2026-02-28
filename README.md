@@ -65,6 +65,13 @@ You can set these tags using:
 
 ## Installation
 
+### From VS Code Marketplace
+
+Install
+[Jupyter Slide Navigator](https://marketplace.visualstudio.com/items?itemName=hoelzl.jupyter-slide-nav)
+directly from the Marketplace, or search for "Jupyter Slide Navigator" in the
+Extensions view (`Ctrl+Shift+X`).
+
 ### From GitHub Release
 
 Download the latest `.vsix` from the
@@ -104,6 +111,16 @@ npm install
 Open the folder in VS Code, then press `F5` to compile and launch an Extension
 Development Host with the extension loaded. Use `npm run watch` for automatic
 recompilation during development.
+
+## Publishing
+
+To publish a new version to the VS Code Marketplace:
+
+```bash
+npx @vscode/vsce publish patch   # or minor / major
+```
+
+See [PUBLISHING.md](PUBLISHING.md) for the full setup and publishing guide.
 
 ## License
 
