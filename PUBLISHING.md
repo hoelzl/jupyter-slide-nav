@@ -43,12 +43,27 @@ Paste your PAT when prompted. The credential is stored locally.
 ### 4. Set Up Open VSX (Optional)
 
 Open VSX is an open alternative registry used by VS Codium, Gitpod, and other
-editors. To publish there as well:
+editors. Publishing there has a few first-time requirements that the access
+token alone does **not** satisfy — work through this checklist once:
 
-1. Go to <https://open-vsx.org/> and sign in with your **GitHub** account.
-2. Go to <https://open-vsx.org/user-settings/tokens> and click
-   **Generate New Token**.
-3. Copy the token immediately.
+- [ ] **Sign in** to <https://open-vsx.org/> with your **GitHub** account.
+- [ ] **Sign the publisher agreement** — accept the Eclipse Foundation Open VSX
+      Publisher Agreement in your open-vsx.org user settings. Open VSX rejects
+      every publish until this is signed (the `ovsx` CLI will also point you to
+      it if you skip it).
+- [ ] **Generate a token** at <https://open-vsx.org/user-settings/tokens> →
+      **Generate New Token**, and copy it immediately (you won't see it again).
+- [ ] **Claim the `hoelzl` namespace** — one time only; skip if it already
+      exists (command below).
+- [ ] **Make the token available** to whoever publishes: as the `OVSX_TOKEN`
+      repository secret for CI (see below), or via `-p` / `OVSX_PAT` for local
+      publishing.
+
+Claim the namespace once (only needed the first time you publish):
+
+```bash
+npx ovsx create-namespace hoelzl -p <your-ovsx-token>
+```
 
 #### For CI (GitHub Actions)
 
