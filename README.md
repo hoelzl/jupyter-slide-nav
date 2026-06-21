@@ -28,11 +28,22 @@ using the standard slideshow cell metadata (the same metadata used by RISE and
 | Previous Slide       | `Ctrl+Shift+PageUp`       | `Cmd+Shift+PageUp`        |
 | Next Fragment         | `Ctrl+Shift+Down`         | `Cmd+Shift+Down`          |
 | Previous Fragment     | `Ctrl+Shift+Up`           | `Cmd+Shift+Up`            |
-| First Slide          | `Ctrl+Shift+Home`         | `Cmd+Shift+Home`          |
-| Last Slide           | `Ctrl+Shift+End`          | `Cmd+Shift+End`           |
+| Go to Slide…         | `Ctrl+Shift+O`            | `Cmd+Shift+O`             |
+| Go Back              | `Ctrl+Shift+Backspace`    | `Cmd+Shift+Backspace`     |
+| First Slide          | _(unbound)_               | _(unbound)_               |
+| Last Slide           | _(unbound)_               | _(unbound)_               |
 | Toggle Slide View    | `Ctrl+Shift+/`            | `Cmd+Shift+/`             |
 
-All keybindings are active only when a notebook editor is focused.
+**Go to Slide…** opens a filterable overview of every slide — type part of a
+slide's title to jump straight to it. **Go Back** returns to your previous
+position, which is handy for recovering from an accidental jump. **First Slide**
+and **Last Slide** have no default keys (to avoid accidental jumps) but remain
+available from the Command Palette; bind them yourself if you want shortcuts.
+
+Slide navigation (next/previous slide and fragment) works whether a cell is in
+command mode, in edit mode, or while the rendered slide output is focused. The
+overview and Go Back commands are active in command mode and over slide output
+(not while typing inside a cell).
 
 ## Configuration
 
@@ -71,6 +82,12 @@ Install
 [Jupyter Slide Navigator](https://marketplace.visualstudio.com/items?itemName=hoelzl.jupyter-slide-nav)
 directly from the Marketplace, or search for "Jupyter Slide Navigator" in the
 Extensions view (`Ctrl+Shift+X`).
+
+### From Open VSX Registry (VS Codium, Theia, Gitpod)
+
+Install from the
+[Open VSX Registry](https://open-vsx.org/extension/hoelzl/jupyter-slide-nav),
+or search for "Jupyter Slide Navigator" in your editor's Extensions view.
 
 ### From GitHub Release
 
@@ -119,6 +136,9 @@ To publish a new version to the VS Code Marketplace:
 ```bash
 npx @vscode/vsce publish patch   # or minor / major
 ```
+
+The extension is also published to the [Open VSX Registry](https://open-vsx.org/)
+automatically via CI when pushing a version tag (requires the `OVSX_TOKEN` secret).
 
 See [PUBLISHING.md](PUBLISHING.md) for the full setup and publishing guide.
 

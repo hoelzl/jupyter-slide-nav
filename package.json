@@ -2,7 +2,7 @@
   "name": "jupyter-slide-nav",
   "displayName": "Jupyter Slide Navigator",
   "description": "Navigate Jupyter notebooks slide-by-slide using slideshow metadata. Jump to the next or previous cell tagged as 'slide' or 'subslide'.",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "publisher": "hoelzl",
   "license": "MIT",
   "repository": {
@@ -60,6 +60,16 @@
         "category": "Slide Navigator"
       },
       {
+        "command": "jupyterSlideNav.goToSlide",
+        "title": "Go to Slide…",
+        "category": "Slide Navigator"
+      },
+      {
+        "command": "jupyterSlideNav.navigateBack",
+        "title": "Go Back to Previous Position",
+        "category": "Slide Navigator"
+      },
+      {
         "command": "jupyterSlideNav.toggleSlideView",
         "title": "Toggle Slide View",
         "category": "Slide Navigator"
@@ -70,37 +80,37 @@
         "command": "jupyterSlideNav.nextSlide",
         "key": "ctrl+shift+pagedown",
         "mac": "cmd+shift+pagedown",
-        "when": "notebookEditorFocused"
+        "when": "notebookEditorFocused || notebookOutputFocused"
       },
       {
         "command": "jupyterSlideNav.prevSlide",
         "key": "ctrl+shift+pageup",
         "mac": "cmd+shift+pageup",
-        "when": "notebookEditorFocused"
+        "when": "notebookEditorFocused || notebookOutputFocused"
       },
       {
         "command": "jupyterSlideNav.nextFragment",
         "key": "ctrl+shift+down",
         "mac": "cmd+shift+down",
-        "when": "notebookEditorFocused"
+        "when": "notebookEditorFocused || notebookOutputFocused"
       },
       {
         "command": "jupyterSlideNav.prevFragment",
         "key": "ctrl+shift+up",
         "mac": "cmd+shift+up",
-        "when": "notebookEditorFocused"
+        "when": "notebookEditorFocused || notebookOutputFocused"
       },
       {
-        "command": "jupyterSlideNav.firstSlide",
-        "key": "ctrl+shift+home",
-        "mac": "cmd+shift+home",
-        "when": "notebookEditorFocused"
+        "command": "jupyterSlideNav.goToSlide",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
+        "when": "(notebookEditorFocused && !inputFocus) || notebookOutputFocused"
       },
       {
-        "command": "jupyterSlideNav.lastSlide",
-        "key": "ctrl+shift+end",
-        "mac": "cmd+shift+end",
-        "when": "notebookEditorFocused"
+        "command": "jupyterSlideNav.navigateBack",
+        "key": "ctrl+shift+backspace",
+        "mac": "cmd+shift+backspace",
+        "when": "(notebookEditorFocused && !inputFocus) || notebookOutputFocused"
       },
       {
         "command": "jupyterSlideNav.toggleSlideView",

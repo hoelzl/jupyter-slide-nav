@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Add **Go to Slide…** command (`Ctrl+Shift+O`) — a filterable overview of every slide; type part of a slide's title to jump straight to it
+- Add **Go Back** command (`Ctrl+Shift+Backspace`) — returns to your previous position, for recovering from accidental jumps; backed by per-notebook navigation history
+- Slide and fragment navigation now also fire while a cell is in edit mode or the rendered slide output is focused (`when` broadened to `notebookEditorFocused || notebookOutputFocused`)
+- Remove the accident-prone `Ctrl+Shift+Home` / `Ctrl+Shift+End` keybindings for First/Last Slide; the commands remain available from the Command Palette
+- Publish releases to the Open VSX Registry via CI (requires the `OVSX_TOKEN` secret)
+
 ## 0.2.3
 
 - Let spacer cells persist to disk and fix detection after reload

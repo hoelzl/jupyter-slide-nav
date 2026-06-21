@@ -14,6 +14,36 @@ const FRAGMENT_TYPES: ReadonlySet<SlideType> = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+// Navigation history
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-notebook stack of previously focused cell indices, keyed by notebook URI.
+ * Every navigation command records where it left from, so the user can step
+ * back — e.g. to recover from an accidental jump to the first or last slide.
+ */
+const navigationHistory = new Map<string, number[]>();
+
+/** Maximum number of positions remembered per notebook. */
+const HISTORY_LIMIT = 50;
+
+/** Record the editor's current cell position on the back-stack. */
+function pushHistory(editor: vscode.NotebookEditor): void {
+  const uri = editor.notebook.uri.toString();
+  const stack = navigationHistory.get(uri) ?? [];
+  const current = getCurrentCellIndex(editor);
+
+  // Skip consecutive duplicates so repeated commands don't bloat the stack.
+  if (stack.length === 0 || stack[stack.length - 1] !== current) {
+    stack.push(current);
+    if (stack.length > HISTORY_LIMIT) {
+      stack.shift();
+    }
+    navigationHistory.set(uri, stack);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Slide view state
 // ---------------------------------------------------------------------------
 
@@ -265,6 +295,7 @@ function nextSlide(targets: ReadonlySet<SlideType>): void {
   const next = index.find((s) => s.cellIndex > current);
 
   if (next) {
+    pushHistory(editor);
     navigateToCell(editor, next.cellIndex);
     updateStatusBar(editor, index, next);
   } else {
@@ -299,6 +330,7 @@ function prevSlide(targets: ReadonlySet<SlideType>): void {
   }
 
   if (prev) {
+    pushHistory(editor);
     navigateToCell(editor, prev.cellIndex);
     updateStatusBar(editor, index, prev);
   } else {
@@ -322,6 +354,7 @@ function firstSlide(): void {
   }
 
   const first = index[0];
+  pushHistory(editor);
   navigateToCell(editor, first.cellIndex);
   updateStatusBar(editor, index, first);
 }
@@ -342,8 +375,135 @@ function lastSlide(): void {
   }
 
   const last = index[index.length - 1];
+  pushHistory(editor);
   navigateToCell(editor, last.cellIndex);
   updateStatusBar(editor, index, last);
+}
+
+/**
+ * Return to the previously focused position, popping the back-stack.
+ * Recovers from accidental jumps (e.g. to the first or last slide).
+ */
+function navigateBack(): void {
+  const editor = vscode.window.activeNotebookEditor;
+  if (!editor) {
+    return;
+  }
+
+  const uri = editor.notebook.uri.toString();
+  const stack = navigationHistory.get(uri);
+  if (!stack || stack.length === 0) {
+    vscode.window.showInformationMessage(
+      "No previous slide position to return to."
+    );
+    return;
+  }
+
+  let target = stack.pop()!;
+  navigationHistory.set(uri, stack);
+
+  // Cells may have been added or removed since the position was recorded.
+  if (target >= editor.notebook.cellCount) {
+    target = editor.notebook.cellCount - 1;
+  }
+  if (target < 0) {
+    return;
+  }
+
+  navigateToCell(editor, target);
+  refreshStatusBarForSelection(editor);
+}
+
+// ---------------------------------------------------------------------------
+// Slide overview (quick pick)
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive a short, human-readable title for a cell — the first non-empty line,
+ * with a leading Markdown heading marker stripped. Used by the slide overview.
+ */
+function getCellTitle(cell: vscode.NotebookCell): string {
+  const lines = cell.document.getText().split(/\r?\n/);
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const cleaned = trimmed.replace(/^#{1,6}\s+/, "").trim() || trimmed;
+    return cleaned.length > 80 ? cleaned.slice(0, 79) + "…" : cleaned;
+  }
+  return "(empty cell)";
+}
+
+interface SlideQuickPickItem extends vscode.QuickPickItem {
+  slide: SlideIndex;
+}
+
+/**
+ * Show a filterable overview of every slide and jump to the chosen one.
+ * The slide the user is currently on is pre-selected.
+ */
+async function goToSlide(): Promise<void> {
+  const editor = vscode.window.activeNotebookEditor;
+  if (!editor) {
+    return;
+  }
+
+  const config = vscode.workspace.getConfiguration("jupyterSlideNav");
+  const index = buildSlideIndex(editor.notebook, SLIDE_TYPES, config);
+  if (index.length === 0) {
+    vscode.window.showInformationMessage(
+      "No slide metadata found in this notebook."
+    );
+    return;
+  }
+
+  const items: SlideQuickPickItem[] = index.map((s) => {
+    const cell = editor.notebook.cellAt(s.cellIndex);
+    const isSubslide = getSlideType(cell) === "subslide";
+    return {
+      label: getCellTitle(cell),
+      description: isSubslide
+        ? `Slide ${s.slideNumber} · subslide`
+        : `Slide ${s.slideNumber}`,
+      slide: s,
+    };
+  });
+
+  // Pre-select the slide we are currently on (or just after).
+  const current = getCurrentCellIndex(editor);
+  let activeItem: SlideQuickPickItem | undefined;
+  for (let i = index.length - 1; i >= 0; i--) {
+    if (index[i].cellIndex <= current) {
+      activeItem = items[i];
+      break;
+    }
+  }
+
+  const picked = await new Promise<SlideQuickPickItem | undefined>((resolve) => {
+    const qp = vscode.window.createQuickPick<SlideQuickPickItem>();
+    qp.items = items;
+    qp.placeholder = "Go to slide… (type to filter by title)";
+    qp.matchOnDescription = true;
+    if (activeItem) {
+      qp.activeItems = [activeItem];
+    }
+    qp.onDidAccept(() => {
+      resolve(qp.selectedItems[0]);
+      qp.hide();
+    });
+    qp.onDidHide(() => {
+      resolve(undefined);
+      qp.dispose();
+    });
+    qp.show();
+  });
+
+  if (picked) {
+    pushHistory(editor);
+    navigateToCell(editor, picked.slide.cellIndex);
+    updateStatusBar(editor, index, picked.slide);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -532,6 +692,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "jupyterSlideNav.toggleSlideView",
       toggleSlideView
+    ),
+    vscode.commands.registerCommand("jupyterSlideNav.goToSlide", goToSlide),
+    vscode.commands.registerCommand(
+      "jupyterSlideNav.navigateBack",
+      navigateBack
     )
   );
 
@@ -557,6 +722,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidCloseNotebookDocument((notebook) => {
       const uri = notebook.uri.toString();
       slideViewState.delete(uri);
+      navigationHistory.delete(uri);
     })
   );
 
@@ -582,4 +748,5 @@ export function deactivate(): void {
   statusBarItem?.dispose();
   statusBarItem = undefined;
   slideViewState.clear();
+  navigationHistory.clear();
 }

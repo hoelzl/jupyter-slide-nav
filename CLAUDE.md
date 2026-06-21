@@ -28,17 +28,19 @@ The file is organized into sections:
 
 4. **Navigation helpers** — `buildSlideIndex()` scans all cells, skips spacer cells, filters by target set and user config (`includeSubslides`, `skipCellTypes`), returns ordered `SlideIndex[]` with cell positions and 1-based slide numbers. `navigateToCell()` sets selection and reveals at top.
 
-5. **Commands** — `nextSlide`/`prevSlide` (parameterized by target set), `firstSlide`/`lastSlide`. Each rebuilds the index on every invocation to stay current with edits.
+5. **Commands** — `nextSlide`/`prevSlide` (parameterized by target set), `firstSlide`/`lastSlide`, `goToSlide` (a filterable QuickPick overview of all slides), and `navigateBack`. Each rebuilds the index on every invocation to stay current with edits.
+
+   **Navigation history** — a `navigationHistory` map (URI → cell-index stack) records the prior position before each jump via `pushHistory()`; `navigateBack()` pops it to recover from accidental jumps. Cleared on notebook close and in `deactivate()`.
 
 6. **Status bar** — Singleton `StatusBarItem` showing "Slide X/Y", updated on navigation and selection changes. Clickable (triggers nextSlide). Shows a layout icon when slide view is active.
 
 7. **Slide view** — `insertSpacers()` builds the slide index and inserts a sentinel + spacer cell pair before each slide boundary (except the first), processing bottom-to-top. The sentinel is a tiny cell so Shift+Enter doesn't scroll the slide away; the spacer provides the visual gap. `removeSpacers()` deletes all cells with spacer metadata. `toggleSlideView()` is the command handler that toggles spacers on/off.
 
-8. **Activation** — `activate()` registers 7 commands, subscribes to editor/selection change events, and sets up save handlers (`onWillSaveNotebookDocument`/`onDidSaveNotebookDocument`) to transparently remove and re-insert spacers around saves. Also handles notebook close cleanup and orphan spacer removal on startup. `deactivate()` disposes the status bar and clears slide view state.
+8. **Activation** — `activate()` registers 9 commands, subscribes to editor/selection change events, and sets up save handlers (`onWillSaveNotebookDocument`/`onDidSaveNotebookDocument`) to transparently remove and re-insert spacers around saves. Also handles notebook close cleanup and orphan spacer removal on startup. `deactivate()` disposes the status bar and clears slide view state.
 
 ## Extension Manifest (package.json)
 
-All 7 commands use the `jupyterSlideNav.*` namespace and `"Slide Navigator"` category. Keybindings are scoped to `notebookEditorFocused`. Four user-facing settings live under `jupyterSlideNav.*` configuration.
+All 9 commands use the `jupyterSlideNav.*` namespace and `"Slide Navigator"` category. Navigation keybindings are scoped to `notebookEditorFocused || notebookOutputFocused` (so they also fire while the rendered slide output has focus); the overview/back keys add `&& !inputFocus` so they don't interfere while typing in a cell. `firstSlide`/`lastSlide` have commands but no default keybindings. Four user-facing settings live under `jupyterSlideNav.*` configuration.
 
 ## CI/CD
 
