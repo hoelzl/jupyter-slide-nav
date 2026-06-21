@@ -44,4 +44,4 @@ All 9 commands use the `jupyterSlideNav.*` namespace and `"Slide Navigator"` cat
 
 ## CI/CD
 
-`.github/workflows/release.yml` — GitHub Actions workflow that triggers on tag pushes matching `v*`. It checks out the repo, installs dependencies, runs `npm run package` to build the `.vsix`, and creates a GitHub release with the `.vsix` attached (using `softprops/action-gh-release@v2`). To cut a release: create an annotated tag (`git tag -a v0.x.y -m "..."`) and push it (`git push origin v0.x.y`).
+`.github/workflows/release.yml` — GitHub Actions workflow that triggers on tag pushes matching `v*`. It checks out the repo, installs dependencies, runs `npm run package` to build the `.vsix`, creates a GitHub release with the `.vsix` attached (`softprops/action-gh-release@v3`), and then publishes that same `.vsix` to the VS Code Marketplace (`@vscode/vsce`) and the Open VSX Registry (`ovsx`). The two publish steps are each gated on a repository secret — `VSCE_PAT` and `OVSX_TOKEN` respectively — and skip silently when their secret is absent. To cut a release: create an annotated tag (`git tag -a v0.x.y -m "..."`) and push it (`git push origin v0.x.y`).

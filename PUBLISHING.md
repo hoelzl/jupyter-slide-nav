@@ -40,6 +40,20 @@ npx @vscode/vsce login hoelzl
 
 Paste your PAT when prompted. The credential is stored locally.
 
+#### For CI (GitHub Actions)
+
+To let the release workflow publish to the Marketplace automatically, add the
+**same Marketplace PAT** as a repository secret named `VSCE_PAT`:
+
+1. Go to your repo's **Settings > Secrets and variables > Actions**.
+2. Click **New repository secret**.
+3. Name: `VSCE_PAT`, Value: paste the token.
+
+The release workflow publishes to the Marketplace when this secret is present
+and skips the step when it is absent. (The same Azure DevOps PAT works for both
+`vsce login` locally and the `VSCE_PAT` secret in CI — it just needs the
+**Marketplace → Manage** scope.)
+
 ### 4. Set Up Open VSX (Optional)
 
 Open VSX is an open alternative registry used by VS Codium, Gitpod, and other
@@ -91,6 +105,12 @@ npx ovsx publish *.vsix
 
 ## Publishing a New Version
 
+> **Recommended:** once the `VSCE_PAT` and `OVSX_TOKEN` secrets are configured,
+> the easiest path is to bump the version, update `CHANGELOG.md`, and push a
+> `v*` tag — CI then builds the `.vsix`, creates the GitHub release, and
+> publishes to both the Marketplace and Open VSX. The manual commands below are
+> for one-off or local publishing.
+
 ### Quick Publish (bump + publish in one step)
 
 ```bash
@@ -137,7 +157,8 @@ git push origin v0.x.y
 ```
 
 The existing GitHub Actions workflow (`.github/workflows/release.yml`) will
-create a release with the `.vsix` attached and publish to Open VSX (if the
+create a release with the `.vsix` attached, publish to the VS Code Marketplace
+(if the `VSCE_PAT` secret is configured), and publish to Open VSX (if the
 `OVSX_TOKEN` secret is configured).
 
 ## Renewing an Expired PAT
