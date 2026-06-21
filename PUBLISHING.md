@@ -1,7 +1,9 @@
-# Publishing to the VS Code Marketplace
+# Publishing to the VS Code Marketplace and Open VSX Registry
 
 This document describes how to publish Jupyter Slide Navigator to the
-[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=hoelzl.jupyter-slide-nav).
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=hoelzl.jupyter-slide-nav)
+and the [Open VSX Registry](https://open-vsx.org/extension/hoelzl/jupyter-slide-nav)
+(used by VS Codium, Eclipse Theia, Gitpod, and other open-source VS Code alternatives).
 
 ## One-Time Setup
 
@@ -38,6 +40,40 @@ npx @vscode/vsce login hoelzl
 
 Paste your PAT when prompted. The credential is stored locally.
 
+### 4. Set Up Open VSX (Optional)
+
+Open VSX is an open alternative registry used by VS Codium, Gitpod, and other
+editors. To publish there as well:
+
+1. Go to <https://open-vsx.org/> and sign in with your **GitHub** account.
+2. Go to <https://open-vsx.org/user-settings/tokens> and click
+   **Generate New Token**.
+3. Copy the token immediately.
+
+#### For CI (GitHub Actions)
+
+Add the token as a repository secret named `OVSX_TOKEN`:
+
+1. Go to your repo's **Settings > Secrets and variables > Actions**.
+2. Click **New repository secret**.
+3. Name: `OVSX_TOKEN`, Value: paste the token.
+
+The release workflow will automatically publish to Open VSX when this secret is
+present.
+
+#### For Local Publishing
+
+```bash
+npx ovsx publish *.vsix -p <your-ovsx-token>
+```
+
+Or set the token as an environment variable:
+
+```bash
+export OVSX_PAT=<your-ovsx-token>
+npx ovsx publish *.vsix
+```
+
 ## Publishing a New Version
 
 ### Quick Publish (bump + publish in one step)
@@ -64,6 +100,17 @@ If you prefer to control the version yourself:
 npx @vscode/vsce publish
 ```
 
+### Publishing to Open VSX (Local)
+
+After publishing to the Marketplace, you can also publish the same `.vsix` to
+Open VSX:
+
+```bash
+npx ovsx publish *.vsix -p <your-ovsx-token>
+```
+
+Or, if you prefer everything automated, just use the tag-based workflow below.
+
 ### Creating a GitHub Release Too
 
 If you also want a GitHub release (for the `.vsix` download), tag and push after
@@ -75,7 +122,8 @@ git push origin v0.x.y
 ```
 
 The existing GitHub Actions workflow (`.github/workflows/release.yml`) will
-create a release with the `.vsix` attached.
+create a release with the `.vsix` attached and publish to Open VSX (if the
+`OVSX_TOKEN` secret is configured).
 
 ## Renewing an Expired PAT
 
