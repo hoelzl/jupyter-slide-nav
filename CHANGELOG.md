@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- Fix navigation sporadically jumping back to the first slide: when VS Code clears the notebook selection (e.g. after the window loses focus or while a rendered output is focused), navigation now anchors on the first visible cell instead of treating the position as cell 0
+- Add a "Slide Navigator" output channel (View → Output) that logs navigation commands, selection-loss events, and fallback decisions for diagnosing unexpected jumps
+
 ## 0.3.0
 
 - Add **Go to Slide…** command (`Ctrl+Shift+O`) — a filterable overview of every slide; type part of a slide's title to jump straight to it
