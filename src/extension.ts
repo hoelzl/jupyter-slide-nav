@@ -14,6 +14,34 @@ const FRAGMENT_TYPES: ReadonlySet<SlideType> = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+// Diagnostics
+// ---------------------------------------------------------------------------
+
+let diagChannel: vscode.OutputChannel | undefined;
+
+/**
+ * Append a timestamped line to the "Slide Navigator" output channel.
+ * Used to diagnose unexpected jumps: View → Output → "Slide Navigator".
+ */
+function diagLog(message: string): void {
+  if (!diagChannel) {
+    diagChannel = vscode.window.createOutputChannel("Slide Navigator");
+  }
+  diagChannel.appendLine(`${new Date().toISOString()} ${message}`);
+}
+
+/** Compact description of the editor's selection and viewport state. */
+function describeEditorState(editor: vscode.NotebookEditor): string {
+  const sels = editor.selections
+    .map((s) => `[${s.start},${s.end})`)
+    .join(" ");
+  const vis = editor.visibleRanges
+    .map((r) => `[${r.start},${r.end})`)
+    .join(" ");
+  return `selections=${sels || "(none)"} visible=${vis || "(none)"}`;
+}
+
+// ---------------------------------------------------------------------------
 // Navigation history
 // ---------------------------------------------------------------------------
 
@@ -264,11 +292,32 @@ function navigateToCell(
 
 /**
  * Get the index of the currently focused cell.
+ *
+ * When the notebook editor loses focus (to an output webview, a terminal, or
+ * another window), VS Code may clear the selection or collapse it to the empty
+ * range [0, 0). Treating that as "cell 0" made navigation jump back to the
+ * first slide, so an empty selection falls back to the first visible cell —
+ * the viewport is the reliable anchor for a presentation.
  */
 function getCurrentCellIndex(editor: vscode.NotebookEditor): number {
-  if (editor.selections.length > 0) {
-    return editor.selections[0].start;
+  const selection = editor.selections.find((s) => !s.isEmpty);
+  if (selection) {
+    return selection.start;
   }
+
+  const visible = editor.visibleRanges.find((r) => !r.isEmpty);
+  if (visible) {
+    diagLog(
+      `getCurrentCellIndex: selection lost, anchoring on first visible cell ` +
+        `${visible.start} (${describeEditorState(editor)})`
+    );
+    return visible.start;
+  }
+
+  diagLog(
+    `getCurrentCellIndex: no usable selection or visible range, ` +
+      `falling back to cell 0 (${describeEditorState(editor)})`
+  );
   return 0;
 }
 
@@ -293,6 +342,12 @@ function nextSlide(targets: ReadonlySet<SlideType>): void {
 
   const current = getCurrentCellIndex(editor);
   const next = index.find((s) => s.cellIndex > current);
+
+  diagLog(
+    `nextSlide(${targets === SLIDE_TYPES ? "slides" : "fragments"}): ` +
+      `current=${current} target=${next ? next.cellIndex : "(at end)"} ` +
+      `(${describeEditorState(editor)})`
+  );
 
   if (next) {
     pushHistory(editor);
@@ -328,6 +383,12 @@ function prevSlide(targets: ReadonlySet<SlideType>): void {
       break;
     }
   }
+
+  diagLog(
+    `prevSlide(${targets === SLIDE_TYPES ? "slides" : "fragments"}): ` +
+      `current=${current} target=${prev ? prev.cellIndex : "(at start)"} ` +
+      `(${describeEditorState(editor)})`
+  );
 
   if (prev) {
     pushHistory(editor);
@@ -713,6 +774,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.window.onDidChangeNotebookEditorSelection((e) => {
+      // A transition to an empty selection is the precursor of the
+      // "jump back to slide 1" bug — record it for diagnosis.
+      if (!e.selections.some((s) => !s.isEmpty)) {
+        diagLog(
+          `selection cleared by VS Code ` +
+            `(${describeEditorState(e.notebookEditor)})`
+        );
+      }
       refreshStatusBarForSelection(e.notebookEditor);
     })
   );
@@ -747,6 +816,8 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
   statusBarItem?.dispose();
   statusBarItem = undefined;
+  diagChannel?.dispose();
+  diagChannel = undefined;
   slideViewState.clear();
   navigationHistory.clear();
 }
